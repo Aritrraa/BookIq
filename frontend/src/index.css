@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-slate-950 text-slate-100 font-sans antialiased; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-slate-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-slate-600 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-slate-500; }
+}
+
+@layer components {
+  .card {
+    @apply bg-slate-900 border border-slate-800 rounded-2xl;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-slate-600 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30;
+  }
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 text-white font-medium px-4 py-2 rounded-xl
+           transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-4 py-2 rounded-xl
+           border border-slate-700 transition-all duration-150 active:scale-95;
+  }
+  .btn-ghost {
+    @apply text-slate-400 hover:text-slate-200 hover:bg-slate-800 px-3 py-1.5 rounded-lg
+           transition-all duration-150;
+  }
+  .input {
+    @apply bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-slate-100
+           placeholder-slate-500 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30
+           transition-all duration-150 w-full;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .badge-blue   { @apply badge bg-blue-500/15 text-blue-400 border border-blue-500/20; }
+  .badge-green  { @apply badge bg-green-500/15 text-green-400 border border-green-500/20; }
+  .badge-red    { @apply badge bg-red-500/15 text-red-400 border border-red-500/20; }
+  .badge-amber  { @apply badge bg-amber-500/15 text-amber-400 border border-amber-500/20; }
+  .badge-purple { @apply badge bg-purple-500/15 text-purple-400 border border-purple-500/20; }
+  .badge-slate  { @apply badge bg-slate-700/60 text-slate-300 border border-slate-600/40; }
+  .section-title { @apply font-serif text-2xl font-bold text-white; }
+  .label { @apply text-xs font-medium text-slate-500 uppercase tracking-wider; }
+}

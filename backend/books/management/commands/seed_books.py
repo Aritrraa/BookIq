@@ -1,0 +1,238 @@
+"""
+Management command: seed_books
+Seeds the database with sample books so the app works without scraping.
+Usage: python manage.py seed_books
+"""
+import random
+from django.core.management.base import BaseCommand
+from books.models import Book
+
+SAMPLE_BOOKS = [
+    {
+        "title": "A Light in the Attic",
+        "author": "Shel Silverstein",
+        "rating": 3.0,
+        "description": "A Light in the Attic is a book of poems that speaks directly to children's sense of play and imagination. Filled with absurd situations, outrageous characters, and a wry, gentle irreverence toward adult rules, it shows young readers that poetry can be funny.",
+        "genre": "Poetry",
+        "price": "£51.77",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html",
+        "cover_image": "https://books.toscrape.com/media/cache/2c/da/2cdad67c44b002e7ead0cc35693c0e8b.jpg",
+        "ai_summary": "A beloved collection of whimsical poems that captures childhood imagination and playfulness with humor and heart.",
+        "ai_genre": "Poetry",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.75,
+        "ai_tags": ["poetry", "children", "humor", "imagination", "playful"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Tipping the Velvet",
+        "author": "Sarah Waters",
+        "rating": 1.0,
+        "description": "Nan King, an oyster girl, is captivated by the music hall phenomenon Kitty Butler, a male impersonator extraordinaire treading the boards in Canterbury. Watching Kitty nightly, Nan becomes entranced by her beauty and comic genius.",
+        "genre": "Historical Fiction",
+        "price": "£53.74",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/catalogue/tipping-the-velvet_999/index.html",
+        "cover_image": "https://books.toscrape.com/media/cache/26/0c/260c6ae16bce31c8f8c95daddd9f4a1c.jpg",
+        "ai_summary": "A vivid Victorian coming-of-age story following a young woman's passionate journey through love, loss, and self-discovery in London's music halls.",
+        "ai_genre": "Historical Fiction",
+        "ai_sentiment": "Neutral",
+        "ai_sentiment_score": 0.1,
+        "ai_tags": ["historical", "romance", "Victorian", "identity", "music-hall"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Soumission",
+        "author": "Michel Houellebecq",
+        "rating": 1.0,
+        "description": "In the very near future, a radical Muslim party has swept to power in France. The cynical narrator, a literary professor, tries to find meaning in a world upended by political and religious upheaval.",
+        "genre": "Literary Fiction",
+        "price": "£50.10",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/catalogue/soumission_998/index.html",
+        "cover_image": "https://books.toscrape.com/media/cache/3e/ef/3eef99c9d9adef34639f510662d2f814.jpg",
+        "ai_summary": "A provocative political novel exploring religion, identity and disillusionment in a near-future France under Islamic governance.",
+        "ai_genre": "Literary Fiction",
+        "ai_sentiment": "Negative",
+        "ai_sentiment_score": -0.3,
+        "ai_tags": ["political", "dystopia", "religion", "France", "satire"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Sharp Objects",
+        "author": "Gillian Flynn",
+        "rating": 4.0,
+        "description": "Fresh from a brief stay at a psych hospital, reporter Camille Preaker faces a troubling assignment: she must travel to her tiny hometown to cover the murders of two preteen girls.",
+        "genre": "Mystery",
+        "price": "£47.82",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/catalogue/sharp-objects_997/index.html",
+        "cover_image": "https://books.toscrape.com/media/cache/32/51/3251cf3a3412f53f339e42cac2134093.jpg",
+        "ai_summary": "A gripping psychological thriller about a journalist investigating child murders in her hometown while confronting her own haunting past.",
+        "ai_genre": "Mystery",
+        "ai_sentiment": "Negative",
+        "ai_sentiment_score": -0.65,
+        "ai_tags": ["thriller", "mystery", "psychological", "dark", "suspense"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Sapiens: A Brief History of Humankind",
+        "author": "Yuval Noah Harari",
+        "rating": 5.0,
+        "description": "From a renowned historian comes a groundbreaking narrative of humanity's creation and evolution—a #1 international bestseller—that explores the ways in which biology and history have defined us.",
+        "genre": "History",
+        "price": "£54.23",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A sweeping intellectual journey through the entire span of human history, exploring how Homo sapiens came to dominate and transform the planet.",
+        "ai_genre": "History",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.6,
+        "ai_tags": ["history", "humanity", "evolution", "culture", "science"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "The Midnight Library",
+        "author": "Matt Haig",
+        "rating": 4.0,
+        "description": "Between life and death there is a library, and within that library, the shelves go on forever. Every book provides a chance to try another life you could have lived.",
+        "genre": "Literary Fiction",
+        "price": "£29.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A magical and life-affirming story about regret, hope and second chances, set in a library between life and death.",
+        "ai_genre": "Literary Fiction",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.8,
+        "ai_tags": ["magical-realism", "philosophy", "self-discovery", "hope", "library"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Dune",
+        "author": "Frank Herbert",
+        "rating": 5.0,
+        "description": "Set in the distant future amidst a feudal interstellar society, Dune tells the story of young Paul Atreides whose family accepts control of the desert planet Arrakis.",
+        "genre": "Science Fiction",
+        "price": "£42.50",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "An epic science fiction saga set on a desert planet that masterfully blends politics, religion, ecology, and human destiny.",
+        "ai_genre": "Science Fiction",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.7,
+        "ai_tags": ["sci-fi", "epic", "desert", "prophecy", "politics"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Atomic Habits",
+        "author": "James Clear",
+        "rating": 5.0,
+        "description": "No matter your goals, Atomic Habits offers a proven framework for improving—every day. James Clear reveals practical strategies that will teach you exactly how to form good habits.",
+        "genre": "Self-Help",
+        "price": "£16.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A practical guide to building better habits and breaking bad ones through small, incremental changes that compound into remarkable results.",
+        "ai_genre": "Self-Help",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.9,
+        "ai_tags": ["habits", "productivity", "self-improvement", "psychology", "success"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "The Great Gatsby",
+        "author": "F. Scott Fitzgerald",
+        "rating": 4.0,
+        "description": "A portrait of the Jazz Age in all of its decadence and excess. Nick Carraway arrives in New York to learn the bond business, rents a house next to Jay Gatsby's mansion.",
+        "genre": "Literary Fiction",
+        "price": "£9.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A timeless critique of the American Dream set in the Roaring Twenties, exploring wealth, obsession, and the hollowness of high society.",
+        "ai_genre": "Literary Fiction",
+        "ai_sentiment": "Neutral",
+        "ai_sentiment_score": -0.1,
+        "ai_tags": ["classic", "American Dream", "Jazz Age", "wealth", "obsession"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "1984",
+        "author": "George Orwell",
+        "rating": 5.0,
+        "description": "Among the seminal texts of the 20th century, Nineteen Eighty-Four is a rare work that grows more haunting as its futuristic attains the qualities of memory.",
+        "genre": "Science Fiction",
+        "price": "£8.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A chilling dystopian masterpiece about totalitarian control, surveillance, and the destruction of individual truth in a perpetual war state.",
+        "ai_genre": "Science Fiction",
+        "ai_sentiment": "Negative",
+        "ai_sentiment_score": -0.8,
+        "ai_tags": ["dystopia", "totalitarianism", "surveillance", "classic", "political"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "The Alchemist",
+        "author": "Paulo Coelho",
+        "rating": 5.0,
+        "description": "Paulo Coelho's masterpiece tells the mystical story of Santiago, an Andalusian shepherd boy who yearns to travel in search of a worldly treasure as extraordinary as any ever found.",
+        "genre": "Literary Fiction",
+        "price": "£11.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A spiritual adventure about following your dreams and discovering your Personal Legend through a shepherd boy's journey across the desert.",
+        "ai_genre": "Literary Fiction",
+        "ai_sentiment": "Positive",
+        "ai_sentiment_score": 0.85,
+        "ai_tags": ["philosophy", "journey", "destiny", "spiritual", "inspirational"],
+        "embeddings_stored": False,
+    },
+    {
+        "title": "Gone Girl",
+        "author": "Gillian Flynn",
+        "rating": 4.0,
+        "description": "On a warm summer morning in North Carthage, Missouri, it is Nick and Amy Dunne's fifth wedding anniversary. When Amy's the apparent victim in a bizarre murder case, the media frenzy descends.",
+        "genre": "Mystery",
+        "price": "£14.99",
+        "availability": "In stock",
+        "book_url": "https://books.toscrape.com/",
+        "cover_image": "https://books.toscrape.com/media/cache/be/a5/bea5697f2534a2f86a3ef27b5a8c12a6.jpg",
+        "ai_summary": "A twisting psychological thriller told from two unreliable perspectives about a marriage gone terribly wrong and the truth buried beneath.",
+        "ai_genre": "Mystery",
+        "ai_sentiment": "Negative",
+        "ai_sentiment_score": -0.5,
+        "ai_tags": ["thriller", "psychological", "marriage", "suspense", "twist"],
+        "embeddings_stored": False,
+    },
+]
+
+
+class Command(BaseCommand):
+    help = "Seed the database with sample books for demo purposes"
+
+    def add_arguments(self, parser):
+        parser.add_argument("--clear", action="store_true", help="Clear existing books first")
+
+    def handle(self, *args, **options):
+        if options["clear"]:
+            Book.objects.all().delete()
+            self.stdout.write(self.style.WARNING("Cleared all existing books."))
+
+        created = 0
+        for data in SAMPLE_BOOKS:
+            book, is_new = Book.objects.get_or_create(title=data["title"], defaults=data)
+            if is_new:
+                created += 1
+                self.stdout.write(f"  ✓ Added: {book.title}")
+            else:
+                self.stdout.write(f"  · Exists: {book.title}")
+
+        self.stdout.write(self.style.SUCCESS(f"\nDone! {created} new books added. {Book.objects.count()} total."))
