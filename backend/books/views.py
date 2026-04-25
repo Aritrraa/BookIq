@@ -123,16 +123,18 @@ class AskView(APIView):
 
         question = serializer.validated_data["question"]
         book_id = serializer.validated_data.get("book_id")
+        history = serializer.validated_data.get("history", [])
 
-        # Cache identical questions
+        # Cache identical questions (bypass if history is present)
         cache_key = f"qa_{hash(question)}_{book_id}"
-        cached = cache.get(cache_key)
-        if cached:
-            cached["cached"] = True
-            return Response(cached)
+        if not history:
+            cached = cache.get(cache_key)
+            if cached:
+                cached["cached"] = True
+                return Response(cached)
 
-        from .ai_service import rag_query
-        result = rag_query(question, book_id=book_id)
+        from .agent import agent_query
+        result = agent_query(question, book_id=book_id, history=history)
 
         # Enrich sources with full book data
         if result.get("sources"):
@@ -152,7 +154,8 @@ class AskView(APIView):
 
         result["question"] = question
         result["cached"] = False
-        cache.set(cache_key, result, 1800)  # cache 30 mins
+        if not history:
+            cache.set(cache_key, result, 1800)  # cache 30 mins
         return Response(result)
 
 

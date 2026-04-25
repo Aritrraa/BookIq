@@ -10,152 +10,111 @@ const GENRES = [
   "Philosophy", "Business", "Cooking",
 ];
 
-const FIELD = ({ label, name, value, onChange, type = "text", placeholder = "", required = false, hint = "" }) => (
-  <div className="space-y-1.5">
-    <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-      {label} {required && <span className="text-red-400">*</span>}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      className="input"
-    />
-    {hint && <p className="text-xs text-slate-600">{hint}</p>}
-  </div>
-);
+function Field({ label, required, hint, children }) {
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      <label className="label">{label} {required && <span style={{ color:"var(--red)" }}>*</span>}</label>
+      {children}
+      {hint && <p style={{ fontSize:"0.72rem", color:"var(--text-4)" }}>{hint}</p>}
+    </div>
+  );
+}
 
 export default function UploadPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    title: "", author: "", rating: "", num_reviews: "0",
-    description: "", genre: "", price: "",
-    availability: "In stock", book_url: "", cover_image: "",
+    title:"", author:"", rating:"", num_reviews:"0",
+    description:"", genre:"", price:"",
+    availability:"In stock", book_url:"", cover_image:"",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const onChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
+  const onChange = e => { const { name, value } = e.target; setForm(p => ({ ...p, [name]: value })); };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    const payload = {
-      ...form,
-      rating: form.rating ? parseFloat(form.rating) : null,
-      num_reviews: parseInt(form.num_reviews) || 0,
-    };
-
+  const handleSubmit = async e => {
+    e.preventDefault(); setLoading(true); setError(""); setSuccess("");
+    const payload = { ...form, rating: form.rating ? parseFloat(form.rating) : null, num_reviews: parseInt(form.num_reviews) || 0 };
     try {
       const book = await createBook(payload);
-      setSuccess(`✓ "${book.title}" added! AI insights are being generated in the background.`);
+      setSuccess(`✓ "${book.title}" added! AI insights are being generated.`);
       setTimeout(() => navigate(`/books/${book.id}`), 2000);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
+  const grid2 = { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.25rem" };
+
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
-      <div className="mb-8">
-        <h1 className="font-serif text-3xl font-bold text-white mb-2">Add a Book</h1>
-        <p className="text-slate-400 text-sm">
-          Manually add a book. AI insights (summary, genre, sentiment, embeddings) will be generated automatically.
-        </p>
+    <div className="page-container-sm animate-fade-in">
+      <div style={{ marginBottom:"2rem" }}>
+        <h1 className="font-serif" style={{ fontSize:"2rem", fontWeight:800, color:"var(--text-1)", marginBottom:8 }}>Add a Book</h1>
+        <p style={{ color:"var(--text-3)", fontSize:"0.875rem" }}>Manually add a book. AI insights will be generated automatically in the background.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card p-6 space-y-5">
-        {/* Error / success */}
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm">{error}</div>
-        )}
-        {success && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-green-300 text-sm flex items-center gap-2">
-            <Spinner size="sm" /> {success}
-          </div>
-        )}
+      <form onSubmit={handleSubmit} className="card" style={{ padding:"1.75rem", display:"flex", flexDirection:"column", gap:"1.25rem" }}>
+        {error && <div style={{ background:"rgba(248,81,73,.1)", border:"1px solid rgba(248,81,73,.3)", borderRadius:"var(--radius)", padding:"10px 14px", color:"#ff9492", fontSize:"0.875rem" }}>{error}</div>}
+        {success && <div style={{ background:"rgba(63,185,80,.1)", border:"1px solid rgba(63,185,80,.3)", borderRadius:"var(--radius)", padding:"10px 14px", color:"var(--green)", fontSize:"0.875rem", display:"flex", alignItems:"center", gap:10 }}><Spinner size="sm" />{success}</div>}
 
-        <div className="grid sm:grid-cols-2 gap-5">
-          <div className="sm:col-span-2">
-            <FIELD label="Title" name="title" value={form.title} onChange={onChange} required placeholder="Book title" />
-          </div>
-          <FIELD label="Author" name="author" value={form.author} onChange={onChange} placeholder="Author name" />
+        <Field label="Title" required>
+          <input className="input" name="title" value={form.title} onChange={onChange} placeholder="Book title" required />
+        </Field>
 
-          {/* Genre dropdown */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Genre</label>
-            <select name="genre" value={form.genre} onChange={onChange} className="input">
-              {GENRES.map((g) => <option key={g} value={g}>{g || "Select genre…"}</option>)}
+        <div style={grid2}>
+          <Field label="Author">
+            <input className="input" name="author" value={form.author} onChange={onChange} placeholder="Author name" />
+          </Field>
+          <Field label="Genre">
+            <select className="input" name="genre" value={form.genre} onChange={onChange}>
+              {GENRES.map(g => <option key={g} value={g}>{g || "Select genre…"}</option>)}
             </select>
-          </div>
-
-          <FIELD label="Rating (0–5)" name="rating" value={form.rating} onChange={onChange} type="number"
-            placeholder="e.g. 4.5" hint="Leave blank if unknown" />
-          <FIELD label="Number of Reviews" name="num_reviews" value={form.num_reviews} onChange={onChange} type="number" />
-          <FIELD label="Price" name="price" value={form.price} onChange={onChange} placeholder="e.g. £12.99" />
-          <FIELD label="Availability" name="availability" value={form.availability} onChange={onChange} placeholder="In stock" />
-          <div className="sm:col-span-2">
-            <FIELD label="Book URL" name="book_url" value={form.book_url} onChange={onChange}
-              type="url" placeholder="https://…" />
-          </div>
-          <div className="sm:col-span-2">
-            <FIELD label="Cover Image URL" name="cover_image" value={form.cover_image} onChange={onChange}
-              type="url" placeholder="https://… (jpg, png)" />
-          </div>
-          <div className="sm:col-span-2 space-y-1.5">
-            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Description</label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={onChange}
-              rows={5}
-              placeholder="Book description or synopsis…"
-              className="input resize-none"
-            />
-            <p className="text-xs text-slate-600">A richer description improves AI insights and RAG accuracy.</p>
-          </div>
+          </Field>
         </div>
 
-        {/* Cover preview */}
-        {form.cover_image && (
-          <div className="flex items-center gap-4 p-3 bg-slate-800/50 rounded-xl">
-            <img src={form.cover_image} alt="preview" className="w-12 h-16 object-cover rounded-lg"
-              onError={(e) => { e.target.style.display = "none"; }} />
-            <p className="text-slate-400 text-xs">Cover preview</p>
-          </div>
-        )}
+        <div style={grid2}>
+          <Field label="Rating (0–5)" hint="Leave blank if unknown">
+            <input className="input" type="number" name="rating" value={form.rating} onChange={onChange} placeholder="e.g. 4.5" min={0} max={5} step={0.1} />
+          </Field>
+          <Field label="Price">
+            <input className="input" name="price" value={form.price} onChange={onChange} placeholder="e.g. £12.99" />
+          </Field>
+        </div>
 
-        <div className="flex gap-3 justify-end pt-2">
+        <Field label="Book URL">
+          <input className="input" type="url" name="book_url" value={form.book_url} onChange={onChange} placeholder="https://…" />
+        </Field>
+
+        <Field label="Cover Image URL">
+          <input className="input" type="url" name="cover_image" value={form.cover_image} onChange={onChange} placeholder="https://… (jpg, png)" />
+          {form.cover_image && (
+            <img src={form.cover_image} alt="preview" style={{ marginTop:8, width:60, height:80, objectFit:"cover", borderRadius:"var(--radius-sm)", border:"1px solid var(--border)" }}
+              onError={e => { e.target.style.display="none"; }} />
+          )}
+        </Field>
+
+        <Field label="Description" hint="A richer description improves AI insights and RAG accuracy.">
+          <textarea className="input" name="description" value={form.description} onChange={onChange} rows={5} placeholder="Book description or synopsis…" style={{ resize:"vertical" }} />
+        </Field>
+
+        <div style={{ display:"flex", justifyContent:"flex-end", gap:12, paddingTop:8 }}>
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancel</button>
-          <button type="submit" disabled={loading || !form.title} className="btn-primary flex items-center gap-2">
+          <button type="submit" disabled={loading || !form.title} className="btn-primary" style={{ display:"flex", alignItems:"center", gap:8 }}>
             {loading ? <><Spinner size="sm" /> Adding…</> : "Add Book & Generate Insights"}
           </button>
         </div>
       </form>
 
-      {/* Info panel */}
-      <div className="mt-6 card p-5 space-y-3">
-        <p className="font-medium text-white text-sm">What happens after you add a book?</p>
+      <div className="card" style={{ padding:"1.25rem", marginTop:"1.5rem" }}>
+        <p style={{ fontWeight:600, color:"var(--text-1)", fontSize:"0.875rem", marginBottom:12 }}>What happens after you add a book?</p>
         {[
-          { icon: "✦", text: "AI generates a summary using Claude" },
-          { icon: "🏷", text: "Genre is classified automatically" },
-          { icon: "📊", text: "Sentiment is analyzed from the description" },
-          { icon: "🔍", text: "Text is chunked & embedded into ChromaDB for RAG" },
-        ].map((s) => (
-          <div key={s.text} className="flex items-center gap-3 text-sm text-slate-400">
-            <span className="text-brand-400">{s.icon}</span> {s.text}
+          { icon:"✦",  text:"AI generates a summary using Groq" },
+          { icon:"🏷",  text:"Genre is classified automatically" },
+          { icon:"📊", text:"Sentiment is analyzed from the description" },
+          { icon:"🔍", text:"Text is chunked & embedded into ChromaDB for RAG" },
+        ].map(s => (
+          <div key={s.text} style={{ display:"flex", alignItems:"center", gap:10, fontSize:"0.875rem", color:"var(--text-3)", marginBottom:10 }}>
+            <span style={{ color:"var(--brand)" }}>{s.icon}</span> {s.text}
           </div>
         ))}
       </div>

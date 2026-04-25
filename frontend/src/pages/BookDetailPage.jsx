@@ -6,29 +6,25 @@ import BookCard from "../components/BookCard";
 
 function InsightRow({ label, children }) {
   return (
-    <div className="flex flex-col gap-1.5 py-3 border-b border-slate-800 last:border-0">
-      <span className="label">{label}</span>
-      <div className="text-slate-200 text-sm leading-relaxed">{children}</div>
+    <div style={{ padding:"14px 0", borderBottom:"1px solid var(--border)" }}>
+      <p className="label" style={{ marginBottom:8 }}>{label}</p>
+      <div style={{ color:"var(--text-2)", fontSize:"0.875rem", lineHeight:1.6 }}>{children}</div>
     </div>
   );
 }
 
 function ScoreBar({ score }) {
-  // score: -1 to 1
   const pct = ((score + 1) / 2) * 100;
-  const color = score > 0.2 ? "bg-green-500" : score < -0.2 ? "bg-red-500" : "bg-slate-500";
+  const color = score > 0.2 ? "var(--green)" : score < -0.2 ? "var(--red)" : "var(--text-3)";
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-xs text-slate-500 w-12 text-right">-1</span>
-      <div className="flex-1 bg-slate-800 rounded-full h-2 relative">
-        <div className="absolute inset-y-0 left-1/2 w-px bg-slate-600" />
-        <div
-          className={`absolute top-0 h-full ${color} rounded-full transition-all duration-700`}
-          style={{ left: `${Math.min(pct - 2, 98)}%`, width: "4%" }}
-        />
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8 }}>
+      <span style={{ fontSize:"0.7rem", color:"var(--text-3)", width:20, textAlign:"right" }}>-1</span>
+      <div style={{ flex:1, background:"var(--bg-2)", borderRadius:99, height:6, position:"relative" }}>
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:1, height:"100%", background:"var(--border)" }} />
+        <div style={{ position:"absolute", top:0, height:"100%", width:"6%", background:color, borderRadius:99, left:`${Math.min(pct-3,94)}%`, transition:"left .7s" }} />
       </div>
-      <span className="text-xs text-slate-500 w-12">+1</span>
-      <span className="text-xs font-mono text-slate-400">{score?.toFixed(2)}</span>
+      <span style={{ fontSize:"0.7rem", color:"var(--text-3)", width:20 }}>+1</span>
+      <span style={{ fontSize:"0.72rem", fontFamily:"'JetBrains Mono',monospace", color:"var(--text-2)" }}>{score?.toFixed(2)}</span>
     </div>
   );
 }
@@ -41,175 +37,123 @@ export default function BookDetailPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     Promise.all([getBook(id), getRecommendations(id)])
       .then(([b, r]) => { setBook(b); setRecs(r.recommendations || []); })
-      .catch((e) => setError(e.message))
+      .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-[50vh]">
-      <Spinner size="lg" />
-    </div>
-  );
-
-  if (error) return (
-    <div className="max-w-xl mx-auto mt-12 px-4">
-      <ErrorBox message={error} />
-    </div>
-  );
-
+  if (loading) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", minHeight:"50vh" }}><Spinner size="lg" /></div>;
+  if (error) return <div style={{ maxWidth:520, margin:"3rem auto", padding:"0 1rem" }}><ErrorBox message={error} /></div>;
   if (!book) return <EmptyState icon="📚" title="Book not found" />;
 
   const genre = book.ai_genre || book.genre;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
-
-      {/* Back */}
-      <Link to="/books" className="btn-ghost text-sm inline-flex items-center gap-1 mb-6">
-        ← Back to Library
-      </Link>
+    <div className="page-container animate-fade-in">
+      <Link to="/books" className="btn-ghost" style={{ marginBottom:24, display:"inline-flex" }}>← Back to Library</Link>
 
       {/* Main layout */}
-      <div className="grid md:grid-cols-3 gap-8">
-
-        {/* Left: Cover + meta */}
-        <div className="space-y-4">
-          <div className="card overflow-hidden">
-            <BookCover
-              src={book.cover_image}
-              title={book.title}
-              className="w-full h-72 md:h-80"
-            />
+      <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:"2rem" }}>
+        {/* Left */}
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div className="card" style={{ overflow:"hidden" }}>
+            <BookCover src={book.cover_image} title={book.title} style={{ width:"100%", height:340 }} />
           </div>
-
-          {/* Metadata card */}
-          <div className="card p-4 space-y-3 text-sm">
+          <div className="card" style={{ padding:"1rem", display:"flex", flexDirection:"column", gap:12, fontSize:"0.875rem" }}>
             {book.price && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Price</span>
-                <span className="text-white font-mono font-medium">{book.price}</span>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <span style={{ color:"var(--text-3)" }}>Price</span>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", fontWeight:600, color:"var(--text-1)" }}>{book.price}</span>
               </div>
             )}
             {book.availability && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Availability</span>
-                <span className="text-green-400 text-xs">{book.availability}</span>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <span style={{ color:"var(--text-3)" }}>Availability</span>
+                <span style={{ color:"var(--green)", fontSize:"0.78rem" }}>{book.availability}</span>
               </div>
             )}
             {book.num_reviews > 0 && (
-              <div className="flex justify-between">
-                <span className="text-slate-500">Reviews</span>
-                <span className="text-slate-300">{book.num_reviews}</span>
+              <div style={{ display:"flex", justifyContent:"space-between" }}>
+                <span style={{ color:"var(--text-3)" }}>Reviews</span>
+                <span style={{ color:"var(--text-2)" }}>{book.num_reviews}</span>
               </div>
             )}
+            <Link to={`/ask?book_id=${book.id}&title=${encodeURIComponent(book.title)}`} className="btn-primary" style={{ marginTop:4, width:"100%", justifyContent:"center" }}>
+              ✦ Ask about this book
+            </Link>
             {book.book_url && book.book_url !== "https://books.toscrape.com/" && (
-              <a
-                href={book.book_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full text-center btn-secondary text-xs mt-2"
-              >
+              <a href={book.book_url} target="_blank" rel="noopener noreferrer" className="btn-secondary" style={{ width:"100%", justifyContent:"center", fontSize:"0.78rem" }}>
                 View on Source ↗
               </a>
             )}
-            <Link
-              to={`/ask?book_id=${book.id}&title=${encodeURIComponent(book.title)}`}
-              className="block w-full text-center btn-primary text-sm"
-            >
-              ✦ Ask about this book
-            </Link>
           </div>
         </div>
 
-        {/* Right: Details + AI insights */}
-        <div className="md:col-span-2 space-y-6">
-
-          {/* Title block */}
+        {/* Right */}
+        <div style={{ display:"flex", flexDirection:"column", gap:24 }}>
           <div>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
               {genre && <GenreBadge genre={genre} />}
               {book.ai_sentiment && <SentimentBadge sentiment={book.ai_sentiment} />}
             </div>
-            <h1 className="font-serif text-3xl md:text-4xl font-bold text-white leading-tight mb-2">
+            <h1 className="font-serif" style={{ fontSize:"clamp(1.6rem,3vw,2.5rem)", fontWeight:800, color:"var(--text-1)", lineHeight:1.2, marginBottom:8 }}>
               {book.title}
             </h1>
-            <p className="text-slate-400 text-lg mb-3">by {book.author || "Unknown Author"}</p>
+            <p style={{ color:"var(--text-3)", fontSize:"1rem", marginBottom:12 }}>by {book.author || "Unknown Author"}</p>
             <StarRating rating={book.rating} size="lg" />
           </div>
 
-          {/* Description */}
           {book.description && (
-            <div className="card p-5">
-              <h2 className="label mb-3">Description</h2>
-              <p className="text-slate-300 leading-relaxed text-sm">{book.description}</p>
+            <div className="card" style={{ padding:"1.25rem" }}>
+              <p className="label" style={{ marginBottom:10 }}>Description</p>
+              <p style={{ color:"var(--text-2)", lineHeight:1.7, fontSize:"0.9rem" }}>{book.description}</p>
             </div>
           )}
 
-          {/* AI Insights */}
-          <div className="card p-5">
-            <h2 className="font-serif font-bold text-white mb-4 flex items-center gap-2">
-              <span className="text-brand-400">✦</span> AI Insights
+          <div className="card" style={{ padding:"1.25rem" }}>
+            <h2 className="font-serif" style={{ fontWeight:700, color:"var(--text-1)", marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ color:"var(--brand)" }}>✦</span> AI Insights
             </h2>
-
-            <div>
-              {book.ai_summary ? (
-                <InsightRow label="AI Summary">
-                  {book.ai_summary}
-                </InsightRow>
-              ) : (
-                <InsightRow label="AI Summary">
-                  <span className="text-slate-500 italic">Not generated yet. Trigger a scrape or re-process.</span>
-                </InsightRow>
-              )}
-
-              <InsightRow label="Genre Classification">
-                {genre
-                  ? <GenreBadge genre={genre} />
-                  : <span className="text-slate-500 italic">Unclassified</span>
-                }
-              </InsightRow>
-
-              <InsightRow label="Sentiment Analysis">
-                <div className="space-y-2">
-                  <SentimentBadge sentiment={book.ai_sentiment} />
-                  {book.ai_sentiment_score != null && (
-                    <ScoreBar score={book.ai_sentiment_score} />
-                  )}
-                </div>
-              </InsightRow>
-
-              {book.ai_tags?.length > 0 && (
-                <InsightRow label="Thematic Tags">
-                  <TagList tags={book.ai_tags} />
-                </InsightRow>
-              )}
-
-              <InsightRow label="Embeddings">
-                <span className={book.embeddings_stored ? "text-green-400" : "text-slate-500"}>
-                  {book.embeddings_stored ? "✓ Stored in ChromaDB — RAG ready" : "✗ Not yet embedded"}
-                </span>
-              </InsightRow>
-            </div>
+            <InsightRow label="AI Summary">
+              {book.ai_summary || <span style={{ color:"var(--text-3)", fontStyle:"italic" }}>Not generated yet.</span>}
+            </InsightRow>
+            <InsightRow label="Genre Classification">
+              {genre ? <GenreBadge genre={genre} /> : <span style={{ color:"var(--text-3)", fontStyle:"italic" }}>Unclassified</span>}
+            </InsightRow>
+            <InsightRow label="Sentiment Analysis">
+              <SentimentBadge sentiment={book.ai_sentiment} />
+              {book.ai_sentiment_score != null && <ScoreBar score={book.ai_sentiment_score} />}
+            </InsightRow>
+            {book.ai_tags?.length > 0 && (
+              <InsightRow label="Thematic Tags"><TagList tags={book.ai_tags} /></InsightRow>
+            )}
+            <InsightRow label="Embeddings">
+              <span style={{ color: book.embeddings_stored ? "var(--green)" : "var(--text-3)" }}>
+                {book.embeddings_stored ? "✓ Stored in ChromaDB — RAG ready" : "✗ Not yet embedded"}
+              </span>
+            </InsightRow>
           </div>
         </div>
       </div>
 
       {/* Recommendations */}
       {recs.length > 0 && (
-        <div className="mt-12">
-          <h2 className="font-serif text-2xl font-bold text-white mb-2">
-            If you like this, you'll like…
-          </h2>
-          <p className="text-slate-400 text-sm mb-6">Recommended based on genre and embedding similarity</p>
-          <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
-            {recs.map((b) => <BookCard key={b.id} book={b} />)}
+        <div style={{ marginTop:"3rem" }}>
+          <h2 className="font-serif" style={{ fontSize:"1.6rem", fontWeight:700, color:"var(--text-1)", marginBottom:6 }}>If you like this, you'll like…</h2>
+          <p style={{ color:"var(--text-3)", fontSize:"0.875rem", marginBottom:"1.5rem" }}>Recommended based on genre and embedding similarity</p>
+          <div className="grid-books">
+            {recs.map(b => <BookCard key={b.id} book={b} />)}
           </div>
         </div>
       )}
+
+      <style>{`
+        @media(max-width:700px){
+          .detail-grid{grid-template-columns:1fr!important}
+        }
+      `}</style>
     </div>
   );
 }

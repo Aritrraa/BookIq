@@ -16,15 +16,15 @@ _embedder         = None
 _openai_client    = None
 
 
-def _get_openai():
+def _get_groq():
     global _openai_client
     if _openai_client is None:
-        from openai import OpenAI
+        from groq import Groq
         from django.conf import settings
-        api_key = settings.OPENAI_API_KEY
+        api_key = settings.GROQ_API_KEY
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not set. Add it to backend/.env")
-        _openai_client = OpenAI(api_key=api_key)
+            raise ValueError("GROQ_API_KEY not set. Add it to backend/.env")
+        _openai_client = Groq(api_key=api_key)
     return _openai_client
 
 
@@ -171,26 +171,30 @@ def similarity_search(query: str, n_results: int = 5,
         return []
 
 
-# ── OpenAI wrapper ────────────────────────────────────────────────────────────
+# ── Groq wrapper ────────────────────────────────────────────────────────────
 
-def _gpt(prompt: str, system: str = "", max_tokens: int = 500) -> str:
-    """Call OpenAI ChatCompletion."""
+def _gpt(prompt: str, system: str = "", max_tokens: int = 500, history: list = None) -> str:
+    """Call Groq ChatCompletion."""
     try:
-        client = _get_openai()
+        client = _get_groq()
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
+        
+        if history:
+            messages.extend(history)
+            
         messages.append({"role": "user", "content": prompt})
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",   # change to "gpt-4o" if you have access
+            model="llama-3.3-70b-versatile",
             messages=messages,
             max_tokens=max_tokens,
             temperature=0.7,
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        logger.error(f"OpenAI API error: {e}")
+        logger.error(f"Groq API error: {e}")
         return ""
 
 
@@ -305,7 +309,7 @@ def get_recommendations(book, all_books: list, n: int = 4) -> list:
 
 # ── RAG Pipeline ──────────────────────────────────────────────────────────────
 
-def rag_query(question: str, book_id: Optional[int] = None) -> dict:
+def rag_query(question: str, book_id: Optional[int] = None, history: list = None) -> dict:
     """
     Full RAG pipeline:
     1. Embed question → similarity search in ChromaDB
@@ -314,11 +318,19 @@ def rag_query(question: str, book_id: Optional[int] = None) -> dict:
     """
     logger.info(f"RAG query: '{question}' (book_id={book_id})")
 
+    contextual_query = question
+    if history:
+        recent = " ".join([m["content"] for m in history[-2:]])
+        contextual_query = f"{recent} {question}"
+
     chunks = []
-    try:
-        chunks = similarity_search(question, n_results=5, book_id=book_id)
-    except Exception as e:
-        logger.warning(f"Vector search error: {e}")
+    if _embedder is not None:
+        try:
+            chunks = similarity_search(contextual_query, n_results=5, book_id=book_id)
+        except Exception as e:
+            logger.warning(f"Vector search error: {e}")
+    else:
+        logger.info("Embedder not loaded yet — skipping vector search, using metadata fallback.")
 
     good_chunks = [c for c in chunks if c.get("score", 0) >= 0.15]
 
@@ -344,10 +356,11 @@ def rag_query(question: str, book_id: Optional[int] = None) -> dict:
         system  = (
             "You are BookIQ, an intelligent book assistant. "
             "Answer questions based on the book context provided. "
-            "Cite which book your answer comes from. Be helpful and specific."
+            "Cite which book your answer comes from. Be helpful and specific. "
+            "IMPORTANT: Use clear formatting with line breaks, bullet points, and short paragraphs so your answer is easy to read. Do not output a single congested paragraph."
         )
         prompt  = f"Context:\n{context}\n\nQuestion: {question}\n\nAnswer with source citations."
-        answer  = _gpt(prompt, system=system, max_tokens=500)
+        answer  = _gpt(prompt, system=system, max_tokens=500, history=history)
 
         if answer:
             return {
@@ -357,10 +370,10 @@ def rag_query(question: str, book_id: Optional[int] = None) -> dict:
                 "method":      "rag",
             }
 
-    return _fallback_answer(question, book_id)
+    return _fallback_answer(question, book_id, history=history)
 
 
-def _fallback_answer(question: str, book_id: Optional[int]) -> dict:
+def _fallback_answer(question: str, book_id: Optional[int], history: list = None) -> dict:
     """Answer from book metadata — works without any embeddings stored."""
     from .models import Book
 
@@ -407,7 +420,7 @@ def _fallback_answer(question: str, book_id: Optional[int]) -> dict:
             "You are BookIQ, a knowledgeable and friendly book assistant. "
             "Answer the user's question using the library data provided. "
             "Be specific — reference actual book titles, authors, genres and themes. "
-            "Give a well-structured, helpful answer. Never say you cannot answer."
+            "IMPORTANT: Use clear formatting with line breaks, bullet points, and short paragraphs so your answer is easy to read. Do not output a single congested paragraph. Never say you cannot answer."
         )
         prompt  = (
             f"Book library:\n\n{context}\n\n"
@@ -415,13 +428,13 @@ def _fallback_answer(question: str, book_id: Optional[int]) -> dict:
             "Give a specific, helpful answer referencing actual books from the library above."
         )
 
-        answer = _gpt(prompt, system=system, max_tokens=500)
+        answer = _gpt(prompt, system=system, max_tokens=500, history=history)
 
         if not answer:
             return {
                 "answer": (
                     "Could not generate a response. "
-                    "Please check that OPENAI_API_KEY is correctly set in backend/.env "
+                    "Please check that GROQ_API_KEY is correctly set in backend/.env "
                     "and restart the Django server."
                 ),
                 "sources": [], "chunks_used": 0, "method": "error",
@@ -451,7 +464,7 @@ def _fallback_answer(question: str, book_id: Optional[int]) -> dict:
         return {
             "answer": (
                 f"Error: {e}. "
-                "Make sure OPENAI_API_KEY is set in backend/.env and restart the server."
+                "Make sure GROQ_API_KEY is set in backend/.env and restart the server."
             ),
             "sources": [], "chunks_used": 0, "method": "error",
         }

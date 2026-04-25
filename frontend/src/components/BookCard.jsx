@@ -7,53 +7,41 @@ export default function BookCard({ book }) {
   const summary = book.ai_summary || book.description;
 
   return (
-    <Link to={`/books/${book.id}`} className="block group">
-      <div className="card-hover h-full flex flex-col overflow-hidden">
+    <Link to={`/books/${book.id}`} style={{ textDecoration:"none", display:"block" }} className="book-card-link">
+      <div className="card-hover" style={{ height:"100%", display:"flex", flexDirection:"column", overflow:"hidden" }}>
         {/* Cover */}
-        <div className="relative overflow-hidden">
-          <BookCover
-            src={book.cover_image}
-            title={book.title}
-            className="w-full h-44 group-hover:scale-105 transition-transform duration-300"
+        <div style={{ position:"relative", overflow:"hidden" }}>
+          <BookCover src={book.cover_image} title={book.title}
+            style={{ width:"100%", height:180, transition:"transform .3s" }}
           />
-          {/* Price badge */}
           {book.price && (
-            <span className="absolute top-2 right-2 bg-black/60 backdrop-blur text-white text-xs font-mono px-2 py-0.5 rounded-lg">
+            <span style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,.7)", backdropFilter:"blur(4px)", color:"#fff", fontSize:"0.7rem", fontFamily:"'JetBrains Mono',monospace", padding:"2px 8px", borderRadius:6 }}>
               {book.price}
             </span>
           )}
-          {/* Sentiment */}
           {book.ai_sentiment && (
-            <span className="absolute bottom-2 left-2">
+            <span style={{ position:"absolute", bottom:8, left:8 }}>
               <SentimentBadge sentiment={book.ai_sentiment} />
             </span>
           )}
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-2 flex-1">
-          {/* Genre */}
+        <div style={{ padding:"14px 14px 16px", display:"flex", flexDirection:"column", gap:8, flex:1 }}>
           {genre && <GenreBadge genre={genre} />}
-
-          {/* Title */}
-          <h3 className="font-serif font-bold text-white text-base leading-snug line-clamp-2 group-hover:text-brand-300 transition-colors">
+          <h3 className="font-serif line-clamp-2" style={{ fontWeight:700, color:"var(--text-1)", fontSize:"0.975rem", lineHeight:1.35 }}>
             {book.title}
           </h3>
-
-          {/* Author */}
-          <p className="text-slate-500 text-xs">{book.author || "Unknown Author"}</p>
-
-          {/* Rating */}
+          <p style={{ color:"var(--text-3)", fontSize:"0.75rem" }}>{book.author || "Unknown Author"}</p>
           <StarRating rating={book.rating} />
-
-          {/* AI Summary */}
           {summary && (
-            <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 mt-auto pt-1">
+            <p className="line-clamp-2" style={{ color:"var(--text-3)", fontSize:"0.75rem", lineHeight:1.5, marginTop:"auto", paddingTop:4 }}>
               {summary}
             </p>
           )}
         </div>
       </div>
+      <style>{`.book-card-link:hover img{transform:scale(1.05);}`}</style>
     </Link>
   );
 }

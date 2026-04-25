@@ -49,3 +49,8 @@ class ScrapeLogSerializer(serializers.ModelSerializer):
 class QuestionSerializer(serializers.Serializer):
     question = serializers.CharField(min_length=3, max_length=1000)
     book_id = serializers.IntegerField(required=False, allow_null=True)
+    history = serializers.ListField(
+        child=serializers.DictField(),
+        required=False,
+        default=list
+    )

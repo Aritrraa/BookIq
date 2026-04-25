@@ -1,58 +1,54 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { askQuestion, getBooks } from "../services/api";
-import { Spinner, BookCover } from "../components/ui";
+import { Spinner } from "../components/ui";
 
-const EXAMPLE_QUESTIONS = [
+const EXAMPLES = [
   "Which books have the most positive tone?",
   "Recommend a mystery book with high rating",
   "What science fiction books do you have?",
-  "Summarise the themes in literary fiction books",
-  "Which book would be best for someone who likes philosophy?",
+  "Summarise themes in literary fiction",
+  "Which book is best for someone who likes philosophy?",
 ];
 
-function MessageBubble({ msg }) {
+function Bubble({ msg }) {
   const isUser = msg.role === "user";
   return (
-    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} animate-slide-up`}>
+    <div style={{ display:"flex", gap:12, flexDirection: isUser ? "row-reverse" : "row" }} className="animate-slide-up">
       {/* Avatar */}
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 mt-1
-        ${isUser ? "bg-brand-600 text-white" : "bg-slate-800 border border-slate-700 text-brand-400"}`}>
-        {isUser ? "U" : "✦"}
-      </div>
+      <div style={{
+        width:34, height:34, borderRadius:"50%", flexShrink:0, marginTop:2,
+        display:"flex", alignItems:"center", justifyContent:"center", fontSize:"0.85rem",
+        background: isUser ? "var(--brand)" : "var(--bg-2)",
+        color: isUser ? "#fff" : "var(--brand)",
+        border: isUser ? "none" : "1px solid var(--border)",
+      }}>{isUser ? "U" : "✦"}</div>
 
-      <div className={`max-w-2xl space-y-3 ${isUser ? "items-end" : "items-start"} flex flex-col`}>
+      <div style={{ maxWidth:620, display:"flex", flexDirection:"column", gap:10, alignItems: isUser ? "flex-end" : "flex-start" }}>
         {/* Bubble */}
-        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed
-          ${isUser
-            ? "bg-brand-600 text-white rounded-tr-sm"
-            : "bg-slate-800 border border-slate-700 text-slate-200 rounded-tl-sm"
-          }`}>
-          {msg.content}
-        </div>
+        <div className="whitespace-pre-wrap" style={{
+          padding:"12px 16px", borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+          fontSize:"0.875rem", lineHeight:1.65,
+          background: isUser ? "var(--brand)" : "var(--bg-2)",
+          color: isUser ? "#fff" : "var(--text-1)",
+          border: isUser ? "none" : "1px solid var(--border)",
+        }}>{msg.content}</div>
 
         {/* Sources */}
         {msg.sources?.length > 0 && (
-          <div className="space-y-2 w-full">
-            <p className="text-xs text-slate-500 px-1">Sources used:</p>
-            <div className="flex flex-wrap gap-2">
-              {msg.sources.map((src) => (
-                <Link
-                  key={src.book_id}
-                  to={`/books/${src.book_id}`}
-                  className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2
-                             hover:border-brand-600/50 transition-colors group"
-                >
-                  {src.cover_image && (
-                    <BookCover src={src.cover_image} title={src.title} className="w-6 h-8 rounded object-cover" />
-                  )}
+          <div>
+            <p style={{ fontSize:"0.72rem", color:"var(--text-4)", marginBottom:6, paddingLeft:2 }}>Sources used:</p>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+              {msg.sources.map(src => (
+                <Link key={src.book_id} to={`/books/${src.book_id}`} style={{
+                  display:"flex", alignItems:"center", gap:8, textDecoration:"none",
+                  background:"var(--bg-1)", border:"1px solid var(--border)", borderRadius:"var(--radius)",
+                  padding:"6px 12px", transition:"border-color var(--transition)",
+                }}>
+                  {src.cover_image && <img src={src.cover_image} alt={src.title} style={{ width:20, height:28, objectFit:"cover", borderRadius:4 }} />}
                   <div>
-                    <p className="text-xs font-medium text-slate-300 group-hover:text-white line-clamp-1 max-w-[120px]">
-                      {src.title}
-                    </p>
-                    <p className="text-xs text-slate-500 font-mono">
-                      {Math.round(src.relevance_score * 100)}% match
-                    </p>
+                    <p style={{ fontSize:"0.75rem", fontWeight:500, color:"var(--text-2)", maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{src.title}</p>
+                    <p style={{ fontSize:"0.68rem", fontFamily:"'JetBrains Mono',monospace", color:"var(--text-3)" }}>{Math.round(src.relevance_score * 100)}% match</p>
                   </div>
                 </Link>
               ))}
@@ -60,13 +56,21 @@ function MessageBubble({ msg }) {
           </div>
         )}
 
-        {/* Method badge */}
-        {msg.method && (
-          <span className="text-xs text-slate-600 px-1">
-            via {msg.method === "rag" ? "RAG pipeline" : msg.method}
-            {msg.chunks_used > 0 && ` · ${msg.chunks_used} chunks`}
-            {msg.cached && " · cached"}
-          </span>
+        {/* Agent info */}
+        {(msg.method || msg.agent_steps) && (
+          <div style={{ display:"flex", flexDirection:"column", gap:4, paddingLeft:2 }}>
+            <span style={{ fontSize:"0.7rem", color:"var(--text-4)" }}>
+              via {msg.method === "rag" ? "RAG pipeline" : msg.method}
+              {msg.question_type && ` · ${msg.question_type}`}
+              {msg.chunks_used > 0 && ` · ${msg.chunks_used} chunks`}
+              {msg.cached && " · cached"}
+            </span>
+            {msg.agent_steps?.length > 0 && (
+              <span style={{ fontSize:"0.66rem", color:"var(--text-4)", fontFamily:"'JetBrains Mono',monospace" }}>
+                graph: {msg.agent_steps.join(" → ")}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
@@ -75,118 +79,90 @@ function MessageBubble({ msg }) {
 
 export default function AskPage() {
   const [searchParams] = useSearchParams();
-  const preBookId    = searchParams.get("book_id");
+  const preBookId = searchParams.get("book_id");
   const preBookTitle = searchParams.get("title");
 
   const [messages, setMessages] = useState([{
-    role: "assistant",
+    role:"assistant",
     content: preBookId
       ? `Hi! I'm BookIQ. Ask me anything about "${preBookTitle || "this book"}" and I'll search through its content to answer you.`
       : "Hi! I'm BookIQ, your AI book assistant. Ask me anything about the books in your library — I'll use RAG to find relevant passages and generate accurate answers.",
   }]);
-  const [input, setInput]         = useState("");
-  const [loading, setLoading]     = useState(false);
-  const [bookId, setBookId]       = useState(preBookId ? parseInt(preBookId) : null);
-  const [books, setBooks]         = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [bookId, setBookId] = useState(preBookId ? parseInt(preBookId) : null);
+  const [books, setBooks] = useState([]);
   const bottomRef = useRef(null);
-  const inputRef  = useRef(null);
+  const inputRef = useRef(null);
 
-  useEffect(() => { getBooks().then((d) => setBooks(d.results || [])).catch(() => {}); }, []);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { getBooks().then(d => setBooks(d.results || [])).catch(() => {}); }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages]);
 
   const send = async (q = input.trim()) => {
     if (!q || loading) return;
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: q }]);
+    const history = messages.slice(1).map(m => ({ role:m.role, content:m.content })).slice(-6);
+    setMessages(prev => [...prev, { role:"user", content:q }]);
     setLoading(true);
-
     try {
-      const res = await askQuestion(q, bookId || null);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: res.answer,
-          sources: res.sources || [],
-          method: res.method,
-          chunks_used: res.chunks_used,
-          cached: res.cached,
-        },
-      ]);
+      const res = await askQuestion(q, bookId || null, history);
+      setMessages(prev => [...prev, {
+        role:"assistant", content:res.answer, sources:res.sources||[],
+        method:res.method, chunks_used:res.chunks_used, cached:res.cached,
+        agent_steps:res.agent_steps||[], question_type:res.question_type||"",
+      }]);
     } catch (e) {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: `Sorry, something went wrong: ${e.message}` },
-      ]);
-    } finally {
-      setLoading(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const handleKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+      setMessages(prev => [...prev, { role:"assistant", content:`Sorry, something went wrong: ${e.message}` }]);
+    } finally { setLoading(false); inputRef.current?.focus(); }
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 flex flex-col min-h-[calc(100vh-4rem)] animate-fade-in">
-
+    <div className="page-container-sm animate-fade-in" style={{ display:"flex", flexDirection:"column", minHeight:"calc(100vh - 4rem)" }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:16, marginBottom:24 }}>
         <div>
-          <h1 className="font-serif text-2xl font-bold text-white flex items-center gap-2">
-            <span className="text-brand-400">✦</span> Ask BookIQ
+          <h1 className="font-serif" style={{ fontSize:"1.6rem", fontWeight:800, color:"var(--text-1)", display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ color:"var(--brand)" }}>✦</span> Ask BookIQ
           </h1>
-          <p className="text-slate-400 text-sm mt-0.5">RAG-powered Q&A across your book library</p>
+          <p style={{ color:"var(--text-3)", fontSize:"0.85rem", marginTop:4 }}>RAG-powered Q&A across your book library</p>
         </div>
-
-        {/* Book scope selector */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-slate-500 text-xs">Scope:</span>
-          <select
-            className="input w-auto text-sm"
-            value={bookId || ""}
-            onChange={(e) => setBookId(e.target.value ? parseInt(e.target.value) : null)}
-          >
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ color:"var(--text-3)", fontSize:"0.78rem" }}>Scope:</span>
+          <select className="input" style={{ width:"auto" }} value={bookId || ""} onChange={e => setBookId(e.target.value ? parseInt(e.target.value) : null)}>
             <option value="">All books</option>
-            {books.map((b) => (
-              <option key={b.id} value={b.id}>{b.title.slice(0, 40)}{b.title.length > 40 ? "…" : ""}</option>
-            ))}
+            {books.map(b => <option key={b.id} value={b.id}>{b.title.slice(0,40)}{b.title.length>40?"…":""}</option>)}
           </select>
-          {bookId && (
-            <button onClick={() => setBookId(null)} className="btn-ghost text-xs">✕ All</button>
-          )}
+          {bookId && <button onClick={() => setBookId(null)} className="btn-ghost" style={{ fontSize:"0.78rem" }}>✕ All</button>}
         </div>
       </div>
 
       {/* Chat area */}
-      <div className="flex-1 card p-4 sm:p-6 overflow-y-auto space-y-6 min-h-[400px] mb-4">
-        {messages.map((m, i) => <MessageBubble key={i} msg={m} />)}
+      <div className="card" style={{ flex:1, padding:"1.5rem", overflowY:"auto", display:"flex", flexDirection:"column", gap:24, minHeight:400, marginBottom:16 }}>
+        {messages.map((m, i) => <Bubble key={i} msg={m} />)}
         {loading && (
-          <div className="flex gap-3 animate-fade-in">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-brand-400 flex items-center justify-center text-sm shrink-0">✦</div>
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-2">
-              <Spinner size="sm" />
-              <span className="text-slate-400 text-sm">Searching books…</span>
+          <div style={{ display:"flex", gap:12 }} className="animate-fade-in">
+            <div style={{ width:34, height:34, borderRadius:"50%", background:"var(--bg-2)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--brand)", flexShrink:0 }}>✦</div>
+            <div style={{ background:"var(--bg-2)", border:"1px solid var(--border)", borderRadius:"18px 18px 18px 4px", padding:"12px 16px", display:"flex", alignItems:"center", gap:10 }}>
+              <Spinner size="sm" /><span style={{ color:"var(--text-3)", fontSize:"0.875rem" }}>Searching books…</span>
             </div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Example questions */}
+      {/* Example prompts */}
       {messages.length <= 1 && (
-        <div className="mb-4">
-          <p className="text-xs text-slate-500 mb-2">Try asking:</p>
-          <div className="flex flex-wrap gap-2">
-            {EXAMPLE_QUESTIONS.map((q) => (
-              <button
-                key={q}
-                onClick={() => send(q)}
-                className="text-xs px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700
-                           hover:border-brand-600/50 text-slate-400 hover:text-slate-200
-                           rounded-full transition-all duration-150"
-              >
+        <div style={{ marginBottom:16 }}>
+          <p style={{ fontSize:"0.75rem", color:"var(--text-4)", marginBottom:8 }}>Try asking:</p>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+            {EXAMPLES.map(q => (
+              <button key={q} onClick={() => send(q)} style={{
+                fontSize:"0.75rem", padding:"6px 12px", borderRadius:99,
+                background:"var(--bg-2)", border:"1px solid var(--border)",
+                color:"var(--text-3)", cursor:"pointer", transition:"all var(--transition)",
+              }}
+              onMouseEnter={e => { e.target.style.background="var(--bg-3)"; e.target.style.color="var(--text-1)"; }}
+              onMouseLeave={e => { e.target.style.background="var(--bg-2)"; e.target.style.color="var(--text-3)"; }}>
                 {q}
               </button>
             ))}
@@ -195,28 +171,17 @@ export default function AskPage() {
       )}
 
       {/* Input */}
-      <div className="flex gap-3">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          className="input resize-none flex-1 py-3 leading-relaxed"
-          placeholder="Ask anything about your books…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKey}
-          style={{ minHeight: "48px", maxHeight: "120px" }}
+      <div style={{ display:"flex", gap:12 }}>
+        <textarea ref={inputRef} rows={1} className="input" placeholder="Ask anything about your books…"
+          value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          style={{ flex:1, resize:"none", minHeight:48, maxHeight:120, paddingTop:12, paddingBottom:12 }}
         />
-        <button
-          onClick={() => send()}
-          disabled={loading || !input.trim()}
-          className="btn-primary px-5 self-end shrink-0"
-        >
+        <button onClick={() => send()} disabled={loading || !input.trim()} className="btn-primary" style={{ alignSelf:"flex-end", padding:"12px 20px" }}>
           {loading ? <Spinner size="sm" /> : "Send"}
         </button>
       </div>
-      <p className="text-xs text-slate-600 mt-2 text-center">
-        Enter to send · Shift+Enter for new line
-      </p>
+      <p style={{ fontSize:"0.72rem", color:"var(--text-4)", marginTop:8, textAlign:"center" }}>Enter to send · Shift+Enter for new line</p>
     </div>
   );
 }

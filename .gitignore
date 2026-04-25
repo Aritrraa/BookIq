@@ -7,3 +7,6 @@ node_modules/
 dist/
 build/
 *.log
+backend/django_cache/
+backend/chroma_db/
+backend/scrape_cache/

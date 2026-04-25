@@ -2,7 +2,7 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api",
-  timeout: 30000,
+  timeout: 120000,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -33,8 +33,8 @@ export const getRecommendations = (id) =>
   api.get(`/books/${id}/recommendations/`).then((r) => r.data);
 
 // ── AI / RAG ─────────────────────────────────────────────
-export const askQuestion = (question, book_id = null) =>
-  api.post("/books/ask/", { question, book_id }).then((r) => r.data);
+export const askQuestion = (question, book_id = null, history = []) =>
+  api.post("/books/ask/", { question, book_id, history }).then((r) => r.data);
 
 // ── Scraping ─────────────────────────────────────────────
 export const triggerScrape = (max_pages = 3, use_selenium = false) =>

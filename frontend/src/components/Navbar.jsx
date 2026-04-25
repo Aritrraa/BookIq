@@ -2,59 +2,67 @@ import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 
 const links = [
-  { to: "/",            label: "Dashboard",  icon: "◈" },
-  { to: "/books",       label: "Library",    icon: "📚" },
-  { to: "/ask",         label: "Ask BookIQ", icon: "✦" },
-  { to: "/upload",      label: "Add Book",   icon: "＋" },
+  { to: "/",       label: "Dashboard",  icon: "◈" },
+  { to: "/books",  label: "Library",    icon: "📚" },
+  { to: "/ask",    label: "Ask BookIQ", icon: "✦" },
+  { to: "/upload", label: "Add Book",   icon: "＋" },
 ];
+
+const navStyle = {
+  position: "sticky", top: 0, zIndex: 50,
+  background: "rgba(3,7,18,0.85)",
+  backdropFilter: "blur(20px)",
+  borderBottom: "1px solid var(--border)",
+};
+const innerStyle = {
+  maxWidth: 1280, margin: "0 auto", padding: "0 1.5rem",
+  height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16,
+};
+const logoBoxStyle = {
+  width: 34, height: 34, background: "var(--brand)", borderRadius: 10,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  color: "#fff", fontWeight: 800, fontSize: 13, letterSpacing: "-.5px",
+};
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
 
+  const linkCls = (active) => ({
+    display: "inline-flex", alignItems: "center", gap: 6,
+    padding: "6px 14px", borderRadius: 8, fontSize: "0.875rem", fontWeight: 500,
+    textDecoration: "none", transition: "all 150ms",
+    background: active ? "var(--brand-glow)" : "transparent",
+    color: active ? "var(--brand)" : "var(--text-3)",
+    border: active ? "1px solid rgba(79,134,247,.25)" : "1px solid transparent",
+  });
+
   return (
-    <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header style={navStyle}>
+      <div style={innerStyle}>
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setOpen(false)}>
-          <div className="w-8 h-8 bg-brand-600 rounded-xl flex items-center justify-center text-white font-bold text-sm">
-            IQ
-          </div>
-          <span className="font-serif font-bold text-lg text-white hidden sm:block">
-            Book<span className="text-brand-400">IQ</span>
+        <Link to="/" style={{ display:"flex", alignItems:"center", gap:10, textDecoration:"none" }} onClick={() => setOpen(false)}>
+          <div style={logoBoxStyle}>IQ</div>
+          <span style={{ fontFamily:"'Playfair Display',Georgia,serif", fontWeight:700, fontSize:"1.15rem", color:"var(--text-1)" }}>
+            Book<span style={{ color:"var(--brand)" }}>IQ</span>
           </span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex items-center gap-1">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === "/"}
-              className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150
-                 ${isActive
-                   ? "bg-brand-600/20 text-brand-400 border border-brand-600/30"
-                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                 }`
-              }
-            >
-              <span className="text-xs">{l.icon}</span>
-              {l.label}
+        <nav style={{ display:"flex", alignItems:"center", gap:4 }} className="desktop-nav">
+          {links.map(l => (
+            <NavLink key={l.to} to={l.to} end={l.to === "/"} style={({ isActive }) => linkCls(isActive)}>
+              <span style={{ fontSize:"0.8rem" }}>{l.icon}</span>{l.label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Right: API indicator + hamburger */}
-        <div className="flex items-center gap-3">
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            API
+        {/* Status + hamburger */}
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:"0.75rem", color:"var(--text-3)" }}>
+            <span style={{ width:8, height:8, borderRadius:"50%", background:"var(--green)", display:"inline-block", animation:"pulse 2s infinite" }} />
+            Live
           </div>
-          <button
-            className="md:hidden p-2 text-slate-400 hover:text-white"
-            onClick={() => setOpen(!open)}
-          >
+          <button onClick={() => setOpen(!open)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text-2)", fontSize:"1.2rem", padding:"4px 8px" }} className="hamburger">
             {open ? "✕" : "☰"}
           </button>
         </div>
@@ -62,23 +70,20 @@ export default function Navbar() {
 
       {/* Mobile menu */}
       {open && (
-        <nav className="md:hidden border-t border-slate-800 bg-slate-950/95 px-4 py-3 flex flex-col gap-1 animate-fade-in">
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              end={l.to === "/"}
-              onClick={() => setOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium
-                 ${isActive ? "bg-brand-600/20 text-brand-400" : "text-slate-400 hover:text-white hover:bg-slate-800"}`
-              }
-            >
+        <nav style={{ borderTop:"1px solid var(--border)", background:"var(--bg-1)", padding:"12px 16px", display:"flex", flexDirection:"column", gap:4 }} className="animate-fade-in">
+          {links.map(l => (
+            <NavLink key={l.to} to={l.to} end={l.to === "/"} onClick={() => setOpen(false)}
+              style={({ isActive }) => ({ ...linkCls(isActive), padding:"10px 14px" })}>
               <span>{l.icon}</span>{l.label}
             </NavLink>
           ))}
         </nav>
       )}
+
+      <style>{`
+        @media(min-width:768px){ .hamburger{display:none!important} }
+        @media(max-width:767px){ .desktop-nav{display:none!important} }
+      `}</style>
     </header>
   );
 }

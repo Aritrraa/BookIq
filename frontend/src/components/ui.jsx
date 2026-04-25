@@ -1,157 +1,131 @@
 import React from "react";
 
-// ── Stars ────────────────────────────────────────────────────────────────────
 export function StarRating({ rating, max = 5, size = "sm" }) {
-  const sz = size === "lg" ? "text-lg" : "text-sm";
+  const sz = size === "lg" ? "1.1rem" : "0.85rem";
   return (
-    <div className={`flex items-center gap-0.5 ${sz}`}>
+    <div style={{ display:"flex", alignItems:"center", gap:2 }}>
       {Array.from({ length: max }).map((_, i) => (
-        <span key={i} className={i < Math.round(rating) ? "text-amber-400" : "text-slate-700"}>
-          ★
-        </span>
+        <span key={i} style={{ fontSize:sz, color: i < Math.round(rating) ? "var(--amber)" : "var(--bg-3)" }}>★</span>
       ))}
       {rating != null && (
-        <span className="ml-1 text-slate-400 text-xs font-mono">{Number(rating).toFixed(1)}</span>
+        <span style={{ marginLeft:6, fontSize:"0.72rem", color:"var(--text-3)", fontFamily:"'JetBrains Mono',monospace" }}>
+          {Number(rating).toFixed(1)}
+        </span>
       )}
     </div>
   );
 }
 
-// ── Sentiment badge ───────────────────────────────────────────────────────────
 export function SentimentBadge({ sentiment }) {
   if (!sentiment) return null;
-  const map = {
-    Positive: "badge-green",
-    Negative: "badge-red",
-    Neutral:  "badge-slate",
-  };
+  const map = { Positive: "badge-green", Negative: "badge-red", Neutral: "badge-slate" };
   const icons = { Positive: "↑", Negative: "↓", Neutral: "→" };
-  return (
-    <span className={map[sentiment] || "badge-slate"}>
-      {icons[sentiment]} {sentiment}
-    </span>
-  );
+  return <span className={`badge ${map[sentiment] || "badge-slate"}`}>{icons[sentiment]} {sentiment}</span>;
 }
 
-// ── Genre badge ───────────────────────────────────────────────────────────────
 export function GenreBadge({ genre }) {
   if (!genre) return null;
-  return <span className="badge-blue">{genre}</span>;
+  return <span className="badge badge-blue">{genre}</span>;
 }
 
-// ── Spinner ───────────────────────────────────────────────────────────────────
-export function Spinner({ size = "md", className = "" }) {
-  const sz = { sm: "w-4 h-4", md: "w-6 h-6", lg: "w-10 h-10" }[size];
+export function Spinner({ size = "md" }) {
+  const s = { sm: 16, md: 24, lg: 40 }[size];
   return (
-    <div className={`${sz} border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin ${className}`} />
+    <div style={{
+      width: s, height: s, borderRadius: "50%",
+      border: `2px solid rgba(79,134,247,.2)`,
+      borderTopColor: "var(--brand)",
+      animation: "spin .7s linear infinite",
+      flexShrink: 0,
+    }} />
   );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
 export function EmptyState({ icon = "📚", title, subtitle, action }) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
-      <div className="text-5xl">{icon}</div>
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"5rem 1rem", gap:16, textAlign:"center" }}>
+      <div style={{ fontSize:"3rem" }}>{icon}</div>
       <div>
-        <p className="text-slate-200 font-medium text-lg">{title}</p>
-        {subtitle && <p className="text-slate-500 text-sm mt-1 max-w-xs">{subtitle}</p>}
+        <p style={{ color:"var(--text-1)", fontWeight:600, fontSize:"1.1rem" }}>{title}</p>
+        {subtitle && <p style={{ color:"var(--text-3)", fontSize:"0.875rem", marginTop:4, maxWidth:320 }}>{subtitle}</p>}
       </div>
-      {action && <div className="mt-2">{action}</div>}
+      {action && <div style={{ marginTop:8 }}>{action}</div>}
     </div>
   );
 }
 
-// ── Error box ─────────────────────────────────────────────────────────────────
 export function ErrorBox({ message, onRetry }) {
   return (
-    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3">
-      <span className="text-red-400 text-lg mt-0.5">⚠</span>
-      <div className="flex-1">
-        <p className="text-red-300 text-sm">{message}</p>
-        {onRetry && (
-          <button onClick={onRetry} className="text-red-400 hover:text-red-300 text-xs mt-2 underline">
-            Try again
-          </button>
-        )}
+    <div style={{ background:"rgba(248,81,73,.1)", border:"1px solid rgba(248,81,73,.3)", borderRadius:"var(--radius)", padding:"14px 16px", display:"flex", alignItems:"flex-start", gap:12 }}>
+      <span style={{ color:"var(--red)", fontSize:"1.1rem" }}>⚠</span>
+      <div>
+        <p style={{ color:"#ff9492", fontSize:"0.875rem" }}>{message}</p>
+        {onRetry && <button onClick={onRetry} style={{ color:"var(--red)", background:"none", border:"none", cursor:"pointer", fontSize:"0.75rem", marginTop:6, textDecoration:"underline" }}>Try again</button>}
       </div>
     </div>
   );
 }
 
-// ── Book cover ────────────────────────────────────────────────────────────────
-export function BookCover({ src, title, className = "" }) {
+export function BookCover({ src, title, style = {} }) {
   const [err, setErr] = React.useState(false);
   if (err || !src) {
     return (
-      <div className={`bg-gradient-to-br from-brand-800 to-slate-800 flex items-center justify-center ${className}`}>
-        <span className="text-3xl">📖</span>
+      <div style={{ background:"linear-gradient(135deg,var(--brand-dim),var(--bg-2))", display:"flex", alignItems:"center", justifyContent:"center", ...style }}>
+        <span style={{ fontSize:"2.5rem" }}>📖</span>
       </div>
     );
   }
-  return (
-    <img
-      src={src}
-      alt={title}
-      className={`object-cover ${className}`}
-      onError={() => setErr(true)}
-    />
-  );
+  return <img src={src} alt={title} style={{ objectFit:"cover", ...style }} onError={() => setErr(true)} />;
 }
 
-// ── Stat card ────────────────────────────────────────────────────────────────
 export function StatCard({ label, value, icon, color = "blue" }) {
-  const colors = {
-    blue:   "from-brand-600/20 to-brand-800/10 border-brand-700/40 text-brand-400",
-    green:  "from-green-600/20 to-green-800/10 border-green-700/40 text-green-400",
-    amber:  "from-amber-600/20 to-amber-800/10 border-amber-700/40 text-amber-400",
-    purple: "from-purple-600/20 to-purple-800/10 border-purple-700/40 text-purple-400",
+  const palettes = {
+    blue:   { bg:"linear-gradient(135deg,rgba(79,134,247,.15),rgba(79,134,247,.05))", border:"rgba(79,134,247,.3)",  text:"var(--brand)" },
+    green:  { bg:"linear-gradient(135deg,rgba(63,185,80,.15),rgba(63,185,80,.05))",   border:"rgba(63,185,80,.3)",   text:"var(--green)" },
+    amber:  { bg:"linear-gradient(135deg,rgba(227,179,65,.15),rgba(227,179,65,.05))", border:"rgba(227,179,65,.3)",  text:"var(--amber)" },
+    purple: { bg:"linear-gradient(135deg,rgba(188,140,255,.15),rgba(188,140,255,.05))",border:"rgba(188,140,255,.3)",text:"var(--purple)" },
   };
+  const p = palettes[color] || palettes.blue;
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5`}>
-      <div className="flex items-start justify-between">
+    <div style={{ background:p.bg, border:`1px solid ${p.border}`, borderRadius:"var(--radius-lg)", padding:"1.25rem" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div>
-          <p className="label mb-1">{label}</p>
-          <p className="text-3xl font-bold text-white font-mono">{value}</p>
+          <p className="label" style={{ marginBottom:6 }}>{label}</p>
+          <p style={{ fontSize:"2rem", fontWeight:800, color:"var(--text-1)", fontFamily:"'JetBrains Mono',monospace" }}>{value}</p>
         </div>
-        <span className="text-2xl opacity-80">{icon}</span>
+        <span style={{ fontSize:"1.6rem", opacity:.8 }}>{icon}</span>
       </div>
     </div>
   );
 }
 
-// ── Section heading ───────────────────────────────────────────────────────────
 export function SectionHeading({ title, subtitle, action }) {
   return (
-    <div className="flex items-start justify-between gap-4 mb-6">
+    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:16, marginBottom:"1.5rem" }}>
       <div>
-        <h2 className="section-title">{title}</h2>
-        {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+        <h2 className="section-title font-serif">{title}</h2>
+        {subtitle && <p style={{ color:"var(--text-3)", fontSize:"0.875rem", marginTop:4 }}>{subtitle}</p>}
       </div>
       {action}
     </div>
   );
 }
 
-// ── Loading skeleton ──────────────────────────────────────────────────────────
 export function SkeletonCard() {
   return (
-    <div className="card p-4 animate-pulse space-y-3">
-      <div className="w-full h-40 bg-slate-800 rounded-xl" />
-      <div className="h-4 bg-slate-800 rounded w-3/4" />
-      <div className="h-3 bg-slate-800 rounded w-1/2" />
-      <div className="h-3 bg-slate-800 rounded w-2/3" />
+    <div className="card" style={{ padding:"1rem", overflow:"hidden" }}>
+      <div style={{ width:"100%", height:160, background:"var(--bg-2)", borderRadius:"var(--radius)", marginBottom:12, animation:"pulse 1.5s infinite" }} />
+      <div style={{ height:14, background:"var(--bg-2)", borderRadius:4, width:"75%", marginBottom:8, animation:"pulse 1.5s infinite" }} />
+      <div style={{ height:12, background:"var(--bg-2)", borderRadius:4, width:"50%", animation:"pulse 1.5s infinite" }} />
     </div>
   );
 }
 
-// ── Tag pills ─────────────────────────────────────────────────────────────────
 export function TagList({ tags = [] }) {
   if (!tags || tags.length === 0) return null;
   return (
-    <div className="flex flex-wrap gap-1.5">
-      {tags.map((t) => (
-        <span key={t} className="badge-slate"># {t}</span>
-      ))}
+    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+      {tags.map(t => <span key={t} className="badge badge-slate"># {t}</span>)}
     </div>
   );
 }
