@@ -160,13 +160,81 @@ User Question + Chat History
 
 ---
 
-## RAG Chunking Strategy
+## RAG Pipeline (Retrieval-Augmented Generation)
 
-Smart chunking in `ai_service.py`:
-1. **Paragraph split** — tries natural paragraph breaks first
-2. **Sentence split** — falls back to sentence boundaries
-3. **Word sliding window** — final fallback with configurable overlap
-- Default: 300 words per chunk, 50-word overlap
+BookIQ implements a full RAG pipeline that allows the AI to answer questions using actual book content rather than just its training data.
+
+### How RAG Works in BookIQ
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     INDEXING PHASE (one-time)                   │
+│                                                                 │
+│  Book Description ──► Smart Chunking ──► Sentence-Transformers  │
+│  (2500+ chars)        (300 words/chunk)   (all-MiniLM-L6-v2)   │
+│                              │                    │             │
+│                              ▼                    ▼             │
+│                        Text Chunks          384-dim Vectors     │
+│                              │                    │             │
+│                              └────────┬───────────┘             │
+│                                       ▼                         │
+│                              ChromaDB Collection                │
+│                              (persistent local store)           │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                     QUERY PHASE (per question)                  │
+│                                                                 │
+│  User Question ──► Embed Question ──► Cosine Similarity Search  │
+│                    (same model)       (ChromaDB, top-5 results) │
+│                                              │                  │
+│                                              ▼                  │
+│                                    Ranked Chunks + Scores       │
+│                                    (filtered by score > 0.15)   │
+│                                              │                  │
+│                                              ▼                  │
+│                          Groq LLM generates answer with         │
+│                          chunk citations as context              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### What Are Chunks?
+
+Books are stored as long text descriptions. RAG works best when this text is split into smaller, focused pieces called **chunks**. Each chunk is independently searchable.
+
+**Example:** A 500-word book description gets split into 2 chunks of ~250 words each. When you ask "What is Room 101?", the system finds the specific chunk that mentions Room 101, rather than sending the entire description.
+
+### Smart Chunking Strategy
+
+The chunking logic in `ai_service.py` uses a 3-tier approach:
+
+| Priority | Method | How It Works | When It's Used |
+|----------|--------|-------------|----------------|
+| 1st | **Paragraph Split** | Splits on `\n\n` (double newlines) | Structured text with clear paragraphs |
+| 2nd | **Sentence Split** | Splits on `.!?` with regex | Text without paragraph breaks |
+| 3rd | **Word Sliding Window** | Fixed 300-word windows with 50-word overlap | Dense text with no punctuation breaks |
+
+**Chunk overlap** (50 words) ensures that concepts spanning two chunks aren't lost at the boundary.
+
+### Current Stats
+- **25 books** in the library
+- **~2500 characters** per description (AI-enriched)
+- **2 chunks per book = 50 total chunks** in ChromaDB
+- **384-dimensional vectors** per chunk (all-MiniLM-L6-v2)
+- **Relevance scores** range from 0.0 to 1.0 (cosine similarity)
+
+### Auto-Embedding Pipeline
+
+When a new book is added (via the Add Book page or scraper), the system automatically:
+
+1. **Saves the book** to SQLite immediately
+2. **Spawns a background thread** that:
+   - Generates AI summary, genre, sentiment, and tags via Groq
+   - Chunks the description text using smart chunking
+   - Encodes chunks with sentence-transformers
+   - Stores vectors in ChromaDB
+   - Marks `embeddings_stored = True`
+3. **Book is RAG-ready** within seconds — no manual steps needed
 
 ---
 
