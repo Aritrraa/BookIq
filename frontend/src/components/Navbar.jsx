@@ -24,7 +24,7 @@ const logoBoxStyle = {
   color: "#fff", fontWeight: 800, fontSize: 13, letterSpacing: "-.5px",
 };
 
-export default function Navbar() {
+export default function Navbar({ user, onLogout }) {
   const [open, setOpen] = useState(false);
 
   const linkCls = (active) => ({
@@ -56,8 +56,40 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Status + hamburger */}
+        {/* User state controls + settings */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {user ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, position: "relative" }}>
+              <span style={{ fontSize: "0.875rem", color: "var(--text-2)", fontWeight: 500 }}>
+                {user.name || user.username}
+              </span>
+              
+              <Link
+                to="/settings"
+                style={iconButtonStyle}
+                title="Profile & API Key Settings"
+              >
+                ⚙️
+              </Link>
+
+              <button
+                onClick={onLogout}
+                className="btn-secondary"
+                style={{ padding: "5px 12px", fontSize: "0.8rem", borderRadius: 8 }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <Link
+              to="/login"
+              className="btn-primary"
+              style={{ padding: "5px 14px", fontSize: "0.8rem", borderRadius: 8 }}
+            >
+              Sign In
+            </Link>
+          )}
+
           <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:"0.75rem", color:"var(--text-3)" }}>
             <span style={{ width:8, height:8, borderRadius:"50%", background:"var(--green)", display:"inline-block", animation:"pulse 2s infinite" }} />
             Live
@@ -77,6 +109,11 @@ export default function Navbar() {
               <span>{l.icon}</span>{l.label}
             </NavLink>
           ))}
+          {user && (
+            <NavLink to="/settings" onClick={() => setOpen(false)} style={({ isActive }) => ({ ...linkCls(isActive), padding:"10px 14px" })}>
+              <span>⚙️</span>Settings
+            </NavLink>
+          )}
         </nav>
       )}
 
@@ -87,3 +124,21 @@ export default function Navbar() {
     </header>
   );
 }
+
+// ── Additional Styles ─────────────────────────────────────────
+const iconButtonStyle = {
+  textDecoration: "none",
+  background: "none",
+  border: "none",
+  fontSize: "1.1rem",
+  cursor: "pointer",
+  color: "var(--text-2)",
+  padding: "4px 8px",
+  borderRadius: 6,
+  transition: "background 150ms",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+

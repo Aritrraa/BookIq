@@ -154,7 +154,7 @@ export default function Dashboard() {
               { step:"1", label:"Scrape & Store",       done:(stats?.total_books ?? 0) > 0 },
               { step:"2", label:"Generate AI Insights",  done:(stats?.books_with_ai ?? 0) > 0 },
               { step:"3", label:"Build Embeddings",      done:(stats?.books_with_embeddings ?? 0) > 0 },
-              { step:"4", label:"Query with RAG",        done:false },
+              { step:"4", label:"Query with RAG",        done:localStorage.getItem("has_queried_rag") === "true" },
             ].map(s => (
               <div key={s.step} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                 <span style={{

@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.contrib.auth.models import User
 
 class Book(models.Model):
     title = models.CharField(max_length=500)
@@ -54,3 +54,13 @@ class ScrapeLog(models.Model):
 
     def __str__(self):
         return f"Scrape {self.status} @ {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class UserProfile(models.Model):
+    """Profile to store user metadata like their own Groq API key."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    groq_api_key = models.CharField(max_length=255, blank=True, default="")
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"
+

@@ -106,6 +106,7 @@ export default function AskPage() {
     setLoading(true);
     try {
       const res = await askQuestion(q, bookId || null, history);
+      localStorage.setItem("has_queried_rag", "true");
       setMessages(prev => [...prev, {
         role:"assistant", content:res.answer, sources:res.sources||[],
         method:res.method, chunks_used:res.chunks_used, cached:res.cached,

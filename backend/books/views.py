@@ -12,15 +12,20 @@ import logging
 import threading
 
 from django.core.cache import cache
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authtoken.models import Token
 
-from .models import Book, ScrapeLog
+from .models import Book, ScrapeLog, UserProfile
 from .serializers import (
     BookCreateSerializer, BookDetailSerializer,
     BookListSerializer, QuestionSerializer, ScrapeLogSerializer,
+    UserSerializer, UserRegisterSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,14 +69,26 @@ class BookListCreateView(APIView):
 
     def post(self, request):
         """Manually upload a book and generate AI insights."""
+        # Enforce demo upload limit (30 seeded + 200 user-uploaded = 230)
+        if Book.objects.count() >= 230:
+            return Response({"error": "Demo limit reached. You can upload up to 200 custom books in this demo version."}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = BookCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         book = serializer.save()
 
+        # Extract Groq Key (header or user profile)
+        groq_key = request.headers.get("X-Groq-Api-Key", "")
+        if not groq_key and request.user and request.user.is_authenticated:
+            try:
+                groq_key = request.user.profile.groq_api_key
+            except Exception:
+                pass
+
         # Generate AI insights asynchronously
-        threading.Thread(target=_process_book_ai, args=(book.id,), daemon=True).start()
+        threading.Thread(target=_process_book_ai, args=(book.id, groq_key), daemon=True).start()
 
         return Response(BookDetailSerializer(book).data, status=status.HTTP_201_CREATED)
 
@@ -163,14 +180,26 @@ class ScrapeView(APIView):
     """POST to trigger web scraping."""
 
     def post(self, request):
+        # Enforce demo limit
+        if Book.objects.count() >= 230:
+            return Response({"error": "Demo limit reached. You can scrape/upload up to 200 custom books in this demo version."}, status=status.HTTP_400_BAD_REQUEST)
+
         max_pages = min(int(request.data.get("max_pages", 3)), 10)
         use_selenium = request.data.get("use_selenium", False)
 
         log = ScrapeLog.objects.create(status="running")
 
+        # Extract Groq Key
+        groq_key = request.headers.get("X-Groq-Api-Key", "")
+        if not groq_key and request.user and request.user.is_authenticated:
+            try:
+                groq_key = request.user.profile.groq_api_key
+            except Exception:
+                pass
+
         thread = threading.Thread(
             target=_run_scrape,
-            args=(log.id, max_pages, use_selenium),
+            args=(log.id, max_pages, use_selenium, groq_key),
             daemon=True,
         )
         thread.start()
@@ -243,10 +272,89 @@ class GenreListView(APIView):
 
 # ── Background Tasks ──────────────────────────────────────────────────────────
 
-def _process_book_ai(book_id: int):
+class RegisterView(APIView):
+    """POST /api/auth/register/"""
+    def post(self, request):
+        serializer = UserRegisterSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = serializer.save()
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            "token": token.key,
+            "user": UserSerializer(user).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class LoginView(APIView):
+    """POST /api/auth/login/"""
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        
+        if not username or not password:
+            return Response({"error": "Please provide both username/email and password"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Support logging in with email
+        if "@" in username:
+            try:
+                user_obj = User.objects.get(email=username)
+                username = user_obj.username
+            except User.DoesNotExist:
+                pass
+                
+        user = authenticate(username=username, password=password)
+        if not user:
+            return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        token, _ = Token.objects.get_or_create(user=user)
+        return Response({
+            "token": token.key,
+            "user": UserSerializer(user).data
+        })
+
+
+class UserProfileView(APIView):
+    """GET /api/auth/me/ | PUT /api/auth/me/"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
+        
+    def put(self, request):
+        user = request.user
+        name = request.data.get("name")
+        groq_api_key = request.data.get("groq_api_key")
+        password = request.data.get("password")
+        
+        if name:
+            user.first_name = name
+        if password:
+            user.set_password(password)
+        user.save()
+        
+        if groq_api_key is not None:
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            profile.groq_api_key = groq_api_key.strip()
+            profile.save()
+            
+        return Response(UserSerializer(user).data)
+
+
+# ── Background Tasks ──────────────────────────────────────────────────────────
+
+def _process_book_ai(book_id: int, groq_api_key: str = ""):
     """Run AI processing for a single book (background thread)."""
     import django
     django.setup()
+    
+    # Inject request user's api key into the context of this background thread
+    if groq_api_key:
+        from .ai_service import groq_api_key_var
+        groq_api_key_var.set(groq_api_key)
+
     try:
         book = Book.objects.get(id=book_id)
         from .ai_service import generate_all_insights, store_book_embeddings
@@ -269,11 +377,16 @@ def _process_book_ai(book_id: int):
         logger.error(f"AI processing failed for book {book_id}: {e}")
 
 
-def _run_scrape(log_id: int, max_pages: int, use_selenium: bool):
+def _run_scrape(log_id: int, max_pages: int, use_selenium: bool, groq_api_key: str = ""):
     """Background scraping task."""
     import django
     django.setup()
     from django.utils import timezone
+
+    # Inject request user's api key into the context of this background thread
+    if groq_api_key:
+        from .ai_service import groq_api_key_var
+        groq_api_key_var.set(groq_api_key)
 
     try:
         from .scraper import scrape_books, try_selenium_scrape

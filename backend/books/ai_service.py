@@ -4,11 +4,14 @@ BookIQ AI Service — OpenAI Edition
 - RAG pipeline using ChromaDB + sentence-transformers
 - Smart chunking for book descriptions
 """
+import contextvars
 import logging
 import re
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+groq_api_key_var = contextvars.ContextVar("groq_api_key", default="")
 
 _chroma_client    = None
 _collection       = None
@@ -17,6 +20,13 @@ _openai_client    = None
 
 
 def _get_groq():
+    # 1. Check for request-specific/user-specific key from middleware
+    custom_key = groq_api_key_var.get()
+    if custom_key:
+        from groq import Groq
+        return Groq(api_key=custom_key)
+
+    # 2. Fall back to global server key
     global _openai_client
     if _openai_client is None:
         from groq import Groq
@@ -26,6 +36,7 @@ def _get_groq():
             raise ValueError("GROQ_API_KEY not set. Add it to backend/.env")
         _openai_client = Groq(api_key=api_key)
     return _openai_client
+
 
 
 def _get_embedder():

@@ -16,4 +16,9 @@ urlpatterns = [
     # Dashboard
     path("stats/", views.StatsView.as_view(), name="stats"),
     path("genres/", views.GenreListView.as_view(), name="genres"),
+
+    # Auth
+    path("auth/register/", views.RegisterView.as_view(), name="register"),
+    path("auth/login/", views.LoginView.as_view(), name="login"),
+    path("auth/me/", views.UserProfileView.as_view(), name="me"),
 ]

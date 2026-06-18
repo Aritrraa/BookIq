@@ -6,6 +6,7 @@ Usage: python manage.py seed_books
 import random
 from django.core.management.base import BaseCommand
 from books.models import Book
+from books.ai_service import store_book_embeddings
 
 SAMPLE_BOOKS = [
     {
@@ -448,6 +449,8 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Cleared all existing books."))
 
         created = 0
+        embedded = 0
+        self.stdout.write("Seeding books and generating embeddings...")
         for data in SAMPLE_BOOKS:
             book, is_new = Book.objects.get_or_create(title=data["title"], defaults=data)
             if is_new:
@@ -456,4 +459,18 @@ class Command(BaseCommand):
             else:
                 self.stdout.write(f"  . Exists: {book.title}")
 
-        self.stdout.write(self.style.SUCCESS(f"\nDone! {created} new books added. {Book.objects.count()} total."))
+            # Automatically compute and store embeddings for RAG
+            if not book.embeddings_stored:
+                text = book.description or book.ai_summary or ""
+                if text:
+                    self.stdout.write(f"    -> Embedding: {book.title}")
+                    chunks = store_book_embeddings(book.id, book.title, text)
+                    if chunks > 0:
+                        book.embeddings_stored = True
+                        book.save(update_fields=["embeddings_stored"])
+                        embedded += 1
+
+        self.stdout.write(self.style.SUCCESS(
+            f"\nDone! {created} new books added, {embedded} books embedded. "
+            f"{Book.objects.count()} total books in database."
+        ))

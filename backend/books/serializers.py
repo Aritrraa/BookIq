@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Book, ScrapeLog
+from django.contrib.auth.models import User
+from .models import Book, ScrapeLog, UserProfile
 
 
 class BookListSerializer(serializers.ModelSerializer):
@@ -54,3 +55,51 @@ class QuestionSerializer(serializers.Serializer):
         required=False,
         default=list
     )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    groq_api_key = serializers.SerializerMethodField()
+    name = serializers.CharField(source="first_name")
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "name", "groq_api_key"]
+
+    def get_groq_api_key(self, obj):
+        try:
+            return obj.profile.groq_api_key
+        except UserProfile.DoesNotExist:
+            return ""
+
+
+class UserRegisterSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(write_only=True, required=False)
+    groq_api_key = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "password", "name", "groq_api_key"]
+        extra_kwargs = {
+            "password": {"write_only": True},
+            "email": {"required": True},
+        }
+
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def create(self, validated_data):
+        name = validated_data.pop("name", "")
+        groq_api_key = validated_data.pop("groq_api_key", "")
+        
+        user = User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+            first_name=name,
+        )
+        
+        UserProfile.objects.create(user=user, groq_api_key=groq_api_key)
+        return user
+

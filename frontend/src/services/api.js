@@ -6,6 +6,22 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Request interceptor to attach Token and Groq API Key
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers["Authorization"] = `Token ${token}`;
+    }
+    const groqKey = localStorage.getItem("groq_api_key");
+    if (groqKey) {
+      config.headers["X-Groq-Api-Key"] = groqKey;
+    }
+    return config;
+  },
+  (err) => Promise.reject(err)
+);
+
 // Response interceptor for error normalisation
 api.interceptors.response.use(
   (res) => res,
@@ -18,6 +34,19 @@ api.interceptors.response.use(
     return Promise.reject(new Error(message));
   }
 );
+
+// ── Authentication ───────────────────────────────────────
+export const loginUser = (username, password) =>
+  api.post("/auth/login/", { username, password }).then((r) => r.data);
+
+export const registerUser = (data) =>
+  api.post("/auth/register/", data).then((r) => r.data);
+
+export const getProfile = () =>
+  api.get("/auth/me/").then((r) => r.data);
+
+export const updateProfile = (data) =>
+  api.put("/auth/me/", data).then((r) => r.data);
 
 // ── Books ────────────────────────────────────────────────
 export const getBooks = (params = {}) =>
@@ -51,3 +80,4 @@ export const getGenres = () =>
   api.get("/genres/").then((r) => r.data);
 
 export default api;
+
